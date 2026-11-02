@@ -14,6 +14,9 @@ and check that it works. Phase 1 covers two ways to use a sandbox:
 
 Every sandbox runs under gVisor (GKE Sandbox).
 
+For what the running platform can and cannot do, see
+[SERVICE-BOUNDARIES.md](SERVICE-BOUNDARIES.md).
+
 Phase 1 leaves out admission policies, a namespace-wide NetworkPolicy,
 FQDN egress rules, an Artifact Registry mirror, and router authentication. See
 [Not included](#not-included).
