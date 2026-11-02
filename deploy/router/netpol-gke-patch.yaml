@@ -1,0 +1,23 @@
+# GKE additions to the upstream router NetworkPolicy:
+# - the control plane private endpoint, which the router's Pod cache watches;
+# - NodeLocal DNSCache, which GKE enables by default on new clusters.
+- op: add
+  path: /spec/egress/-
+  value:
+    to:
+      - ipBlock:
+          cidr: API_ENDPOINT_CIDR
+    ports:
+      - protocol: TCP
+        port: 443
+- op: add
+  path: /spec/egress/-
+  value:
+    to:
+      - ipBlock:
+          cidr: 169.254.20.10/32
+    ports:
+      - protocol: UDP
+        port: 53
+      - protocol: TCP
+        port: 53

@@ -1,0 +1,32 @@
+# SandboxTemplate + SandboxWarmPool for sdk_crud.py. The image is the upstream
+# python-runtime-sandbox, which serves the API the SDK's commands and files
+# helpers call on port 8888. The controller's default NetworkPolicy applies:
+# ingress only from sandbox-router, egress to the public internet only.
+# run-tests.sh sets the namespace and image tag.
+apiVersion: extensions.agents.x-k8s.io/v1beta1
+kind: SandboxTemplate
+metadata:
+  name: c1-m2g-v1
+spec:
+  podTemplate:
+    spec:
+      runtimeClassName: gvisor
+      automountServiceAccountToken: false
+      containers:
+        - name: runtime
+          image: registry.k8s.io/agent-sandbox/python-runtime-sandbox:AGENT_SANDBOX_VERSION
+          ports:
+            - containerPort: 8888
+          resources:
+            requests: {cpu: "1", memory: 2Gi}
+            limits: {cpu: "1", memory: 2Gi}
+---
+apiVersion: extensions.agents.x-k8s.io/v1beta1
+kind: SandboxWarmPool
+metadata:
+  name: c1-m2g
+spec:
+  # No idle Pods: each claim cold-starts, and the gVisor pool can scale to zero.
+  replicas: 0
+  sandboxTemplateRef:
+    name: c1-m2g-v1

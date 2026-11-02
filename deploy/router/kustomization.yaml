@@ -1,0 +1,15 @@
+# sandbox-router with the egress rules GKE needs. base/ is an unmodified copy of
+# sandbox-router/deploy at release v1.0.9; refresh it and the image tag below
+# together with AGENT_SANDBOX_VERSION. 03-install.sh fills in API_ENDPOINT_CIDR.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- base
+images:
+- name: registry.k8s.io/agent-sandbox/sandbox-router-go
+  newTag: v1.0.9
+patches:
+- path: netpol-gke-patch.yaml
+  target:
+    kind: NetworkPolicy
+    name: sandbox-router
