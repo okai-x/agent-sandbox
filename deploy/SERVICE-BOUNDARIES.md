@@ -108,8 +108,25 @@ internet is not restricted by destination.
   deleted. Suspend, resume, and snapshots are not configured.
 - **No image mirror.** Images come from public registries through Cloud NAT,
   so Docker Hub pull limits apply.
-- **No observability.** There are no dashboards, per-user quotas, or cost
-  reports. The only capacity guard is the node pool maximum.
+- **No per-user quotas or cost reports.** The only capacity guard is the node
+  pool maximum.
+
+## Observability
+
+Added on 2026-11-02, after the rest of this document was written.
+
+- Managed Prometheus scrapes the controller and both router replicas every
+  30 s, alongside GKE's node, container, and kube-state metrics.
+- Cloud Monitoring has a dashboard named `agent-sandbox: agent-sandbox-asia-east1`
+  and 8 alert policies. The policies cover the node pool reaching its maximum,
+  Pending sandbox Pods, slow claim startup, image pull failures, NAT port
+  exhaustion, node disk usage, a missing controller, and controller reconcile
+  errors.
+- The image pull and Pending alert expressions were checked against a Pod
+  with a nonexistent image. The other expressions were checked for valid
+  queries only, because their conditions could not be triggered safely.
+- **No notification channel is attached.** Incidents show in the console but
+  notify no one.
 
 ### Availability
 

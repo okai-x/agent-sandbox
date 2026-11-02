@@ -1,6 +1,18 @@
 # GKE additions to the upstream router NetworkPolicy:
+# - metrics scrapes from Managed Service for Prometheus, whose collectors run
+#   in gmp-system (upstream admits only a namespace named "monitoring");
 # - the control plane private endpoint, which the router's Pod cache watches;
 # - NodeLocal DNSCache, which GKE enables by default on new clusters.
+- op: add
+  path: /spec/ingress/-
+  value:
+    from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: gmp-system
+    ports:
+      - protocol: TCP
+        port: 9090
 - op: add
   path: /spec/egress/-
   value:

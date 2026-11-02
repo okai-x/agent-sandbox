@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Installs the agent-sandbox controller and extensions, sandbox-router, and the
-# namespace the tests use. Safe to rerun.
+# Installs the agent-sandbox controller and extensions, sandbox-router, the
+# metrics scrape configs, and the namespace the tests use. Safe to rerun.
 set -euo pipefail
 # shellcheck source=SCRIPTDIR/lib.sh
 source "$(dirname "$0")/lib.sh"
@@ -21,6 +21,9 @@ cp -r "${DEPLOY_DIR}/router/." "${work}/"
 sed -i "s|API_ENDPOINT_CIDR|${api_ip}/32|" "${work}/netpol-gke-patch.yaml"
 "${KUBECTL[@]}" apply -k "${work}"
 "${KUBECTL[@]}" -n agent-sandbox-system rollout status deploy/sandbox-router --timeout=180s
+
+# Needs Managed Service for Prometheus, which GKE enables by default.
+"${KUBECTL[@]}" apply -f "${DEPLOY_DIR}/monitoring/podmonitorings.yaml"
 
 "${KUBECTL[@]}" create namespace "${SANDBOX_NAMESPACE}" --dry-run=client -o yaml \
   | "${KUBECTL[@]}" apply -f -

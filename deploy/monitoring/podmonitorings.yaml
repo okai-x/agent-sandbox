@@ -1,0 +1,30 @@
+# Managed Service for Prometheus scrape configs for the agent-sandbox
+# controller and sandbox-router. GKE already collects node, container, and
+# kube-state metrics; these add the sandbox-level series listed in
+# docs/metrics.md and the router's request metrics.
+apiVersion: monitoring.googleapis.com/v1
+kind: PodMonitoring
+metadata:
+  name: agent-sandbox-controller
+  namespace: agent-sandbox-system
+spec:
+  selector:
+    matchLabels:
+      app: agent-sandbox-controller
+  endpoints:
+    - port: metrics
+      interval: 30s
+---
+apiVersion: monitoring.googleapis.com/v1
+kind: PodMonitoring
+metadata:
+  name: sandbox-router
+  namespace: agent-sandbox-system
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sandbox-router
+      app.kubernetes.io/component: sandbox-router
+  endpoints:
+    - port: metrics
+      interval: 30s

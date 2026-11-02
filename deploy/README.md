@@ -29,8 +29,11 @@ FQDN egress rules, an Artifact Registry mirror, and router authentication. See
 | `lib.sh` | Loads `env.local` and checks required settings. Sourced by the scripts. |
 | `01-cluster.sh` | Creates the subnet, Cloud Router and NAT, and the cluster. |
 | `02-gvisor-nodepool.sh` | Creates the gVisor node pool. |
-| `03-install.sh` | Installs the agent-sandbox controller and extensions, sandbox-router, and the test namespace. Safe to rerun. |
-| `router/` | Kustomization for sandbox-router: `base/` is an unmodified copy of `sandbox-router/deploy` at v1.0.9, plus the GKE egress patch. Refresh `base/` and the image tag when you change `AGENT_SANDBOX_VERSION`. |
+| `03-install.sh` | Installs the agent-sandbox controller and extensions, sandbox-router, the metrics scrape configs, and the test namespace. Safe to rerun. |
+| `04-monitoring.sh` | Creates or updates the Cloud Monitoring alert policies and dashboard. Safe to rerun. |
+| `router/` | Kustomization for sandbox-router: `base/` is an unmodified copy of `sandbox-router/deploy` at v1.0.9, plus the GKE network policy patch. Refresh `base/` and the image tag when you change `AGENT_SANDBOX_VERSION`. |
+| `monitoring/podmonitorings.yaml` | Managed Prometheus scrape configs for the controller and sandbox-router. |
+| `monitoring/cloud_monitoring.py` | The alert policies and dashboard that `04-monitoring.sh` applies. |
 | `tests/run-tests.sh` | Runs both checks below and reports PASS or FAIL. |
 | `tests/sdk_crud.py`, `tests/sdk-warmpool.yaml` | SDK lifecycle, commands, and files through sandbox-router. The script creates the template and warm pool from the YAML and deletes them when it ends, pass or fail. |
 | `tests/rl_smoke.py` | agent-sandbox-rl with two tasks on two different images. |
@@ -101,6 +104,9 @@ Nodes are private and reach the internet through Cloud NAT. The tests pull
 | Kubernetes | agent-sandbox controller and extensions, 4 CRDs | Release `AGENT_SANDBOX_VERSION` in `agent-sandbox-system` |
 | Kubernetes | sandbox-router | 2 replicas in `agent-sandbox-system`, `--authz-mode=allow-all` |
 | Kubernetes | Namespace `SANDBOX_NAMESPACE` | Empty between test runs |
+| Kubernetes | PodMonitorings `agent-sandbox-controller` and `sandbox-router` | Scraped every 30 s by Managed Prometheus |
+| Cloud Monitoring | 8 alert policies named `[<CLUSTER>] ...`, labeled `managed_by=agent-sandbox-deploy` | Notify `ALERT_CHANNELS`; none when it is empty |
+| Cloud Monitoring | Dashboard `agent-sandbox: <CLUSTER>` | 10 PromQL charts |
 
 Standing cost comes from the cluster control plane, the two system nodes and
 their disks, and Cloud NAT. gVisor nodes cost only while sandboxes run, plus
@@ -114,8 +120,41 @@ cp env.example env.local   # then edit env.local
 ./01-cluster.sh            # about 10 minutes
 ./02-gvisor-nodepool.sh    # about 3 minutes
 ./03-install.sh
+./04-monitoring.sh
 tests/run-tests.sh         # about 3–5 minutes, longer when gVisor nodes start from zero
 ```
+
+`04-monitoring.sh` uses the system `python3` (3.10 or later) with no extra
+packages.
+
+## Monitoring
+
+GKE already collects node, container, and kube-state metrics and sends system
+and workload logs to Cloud Logging. `03-install.sh` adds scrapes of the
+controller's sandbox metrics (see [docs/metrics.md](../docs/metrics.md)) and
+the router's request metrics. The router patch admits scrapes from
+`gmp-system`, because the upstream policy admits only a namespace named
+`monitoring`.
+
+`04-monitoring.sh` creates these alert policies. Every condition is PromQL.
+
+| Alert | Fires when |
+| --- | --- |
+| gVisor node pool at maximum size | The gVisor node count reaches `GVISOR_MAX_NODES` × zones for 10 minutes |
+| Sandbox Pods pending | Any Pod outside system namespaces stays Pending for 5 minutes |
+| Sandbox claim startup p95 above 120s | `agent_sandbox_claim_controller_startup_latency_ms` p95 over 15 minutes exceeds 120 s |
+| Sandbox image pull failures | A container outside system namespaces waits in `ImagePullBackOff` or `ErrImagePull` for 5 minutes |
+| Cloud NAT dropping packets for lack of ports | `<CLUSTER>-nat` drops packets with reason `OUT_OF_RESOURCES` |
+| Node ephemeral storage above 80% | Any node's boot disk is more than 80% used for 10 minutes |
+| agent-sandbox controller down | No controller target reports `up == 1` for 5 minutes |
+| agent-sandbox controller reconcile errors | More than one reconcile error every 10 seconds, sustained for 10 minutes |
+
+The thresholds are starting points. Change them in
+`monitoring/cloud_monitoring.py` and rerun `04-monitoring.sh`.
+
+Without `ALERT_CHANNELS`, incidents open in the Cloud Monitoring console but
+notify no one. Create a channel in the console, put its resource name in
+`env.local`, and rerun `04-monitoring.sh`.
 
 `run-tests.sh` prints `PASS` when both checks succeed:
 
@@ -148,3 +187,4 @@ context does not change.
   port-forward`, so callers need cluster credentials.
 - **An Artifact Registry mirror.** Images come from public registries through
   Cloud NAT.
+- **Alert notifications.** No notification channel is configured.
