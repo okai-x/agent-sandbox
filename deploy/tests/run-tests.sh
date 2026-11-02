@@ -16,7 +16,7 @@ work="$(mktemp -d)"
 trap 'rm -rf "${work}"' EXIT
 kubectl config view --minify --flatten --context="$(kube_context)" > "${work}/kubeconfig"
 export KUBECONFIG="${work}/kubeconfig"
-export SANDBOX_NAMESPACE
+export SANDBOX_NAMESPACE AGENT_SANDBOX_VERSION
 
 VENV="${TESTS_DIR}/.venv"
 if [[ ! -x "${VENV}/bin/python" ]]; then
@@ -27,12 +27,8 @@ uv pip install -q --python "${VENV}/bin/python" \
   "${REPO_DIR}/examples/agent-sandbox-rl"
 
 echo "== sdk_crud.py"
-sed "s|AGENT_SANDBOX_VERSION|${AGENT_SANDBOX_VERSION}|" "${TESTS_DIR}/sdk-warmpool.yaml" \
-  | kubectl -n "${SANDBOX_NAMESPACE}" apply -f -
 status=0
 "${VENV}/bin/python" -I "${TESTS_DIR}/sdk_crud.py" || status=1
-kubectl -n "${SANDBOX_NAMESPACE}" delete sandboxwarmpool c1-m2g --ignore-not-found
-kubectl -n "${SANDBOX_NAMESPACE}" delete sandboxtemplate c1-m2g-v1 --ignore-not-found
 
 echo "== rl_smoke.py"
 "${VENV}/bin/python" -I "${TESTS_DIR}/rl_smoke.py" || status=1

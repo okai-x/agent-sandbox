@@ -29,7 +29,7 @@ FQDN egress rules, an Artifact Registry mirror, and router authentication. See
 | `03-install.sh` | Installs the agent-sandbox controller and extensions, sandbox-router, and the test namespace. Safe to rerun. |
 | `router/` | Kustomization for sandbox-router: `base/` is an unmodified copy of `sandbox-router/deploy` at v1.0.9, plus the GKE egress patch. Refresh `base/` and the image tag when you change `AGENT_SANDBOX_VERSION`. |
 | `tests/run-tests.sh` | Runs both checks below and reports PASS or FAIL. |
-| `tests/sdk_crud.py`, `tests/sdk-warmpool.yaml` | SDK lifecycle, commands, and files through sandbox-router. |
+| `tests/sdk_crud.py`, `tests/sdk-warmpool.yaml` | SDK lifecycle, commands, and files through sandbox-router. The script creates the template and warm pool from the YAML and deletes them when it ends, pass or fail. |
 | `tests/rl_smoke.py` | agent-sandbox-rl with two tasks on two different images. |
 | `99-teardown.sh` | Deletes everything `01-cluster.sh` created. Needs `CONFIRM=yes`. |
 

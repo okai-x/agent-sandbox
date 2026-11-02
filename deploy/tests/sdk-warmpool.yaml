@@ -2,7 +2,8 @@
 # python-runtime-sandbox, which serves the API the SDK's commands and files
 # helpers call on port 8888. The controller's default NetworkPolicy applies:
 # ingress only from sandbox-router, egress to the public internet only.
-# run-tests.sh sets the namespace and image tag.
+# sdk_crud.py creates both in SANDBOX_NAMESPACE, fills in the image tag, and
+# deletes them when it ends.
 apiVersion: extensions.agents.x-k8s.io/v1beta1
 kind: SandboxTemplate
 metadata:
